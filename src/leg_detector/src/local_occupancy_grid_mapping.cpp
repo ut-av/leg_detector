@@ -2,9 +2,11 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/create_timer_ros.h>
 #include <tf2/utils.h>
+#include <tf2/time.h>
 
 // Include ROS messages
 
@@ -57,19 +59,19 @@ class OccupancyGridMapping :public rclcpp::Node
             std::string scan_topic;
             grid_centre_pos_found_ = false;
             
-            this->declare_parameter("scan_topic");
-            this->declare_parameter("fixed_frame");
-            this->declare_parameter("base_frame");
-            this->declare_parameter("local_map_topic");
-            this->declare_parameter("local_map_resolution");
-            this->declare_parameter("local_map_cells_per_side");
-            this->declare_parameter("invalid_measurements_are_free_space");
-            this->declare_parameter("unseen_is_free_space");
-            this->declare_parameter("use_scan_header_stamp_for_tfs");
-            this->declare_parameter("shift_threshold");
-            this->declare_parameter("reliable_inf_range");
-            this->declare_parameter("cluster_dist_euclid");
-            this->declare_parameter("min_points_per_cluster");
+            this->declare_parameter("scan_topic", "/scan");
+            this->declare_parameter("fixed_frame", "laser");
+            this->declare_parameter("base_frame", "base_link");
+            this->declare_parameter("local_map_topic", "local_map");
+            this->declare_parameter("local_map_resolution", 0.05);
+            this->declare_parameter("local_map_cells_per_side", 400);
+            this->declare_parameter("invalid_measurements_are_free_space", false);
+            this->declare_parameter("unseen_is_free_space", true);
+            this->declare_parameter("use_scan_header_stamp_for_tfs", false);
+            this->declare_parameter("shift_threshold", 1.0);
+            this->declare_parameter("reliable_inf_range", 5.0);
+            this->declare_parameter("cluster_dist_euclid", 0.13);
+            this->declare_parameter("min_points_per_cluster", 3);
             
             this->get_parameter_or("scan_topic", scan_topic, std::string("/scan"));
             this->get_parameter_or("fixed_frame", fixed_frame_, std::string("laser"));
@@ -105,10 +107,6 @@ class OccupancyGridMapping :public rclcpp::Node
 
             buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
             tfl_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
-            auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-                                                            this->get_node_base_interface(),
-                                                            this->get_node_timers_interface());
-            buffer_->setCreateTimerInterface(timer_interface);
 
             scan_sub_.subscribe(this, scan_topic);
             
@@ -179,10 +177,9 @@ class OccupancyGridMapping :public rclcpp::Node
             {
                 tf_time = scan_msg->header.stamp;
 
-                try
-                {
-                    buffer_->canTransform(fixed_frame_, scan_msg->header.frame_id, tf_time, rclcpp::Duration(1.0));
-                    transform_available = buffer_->canTransform(fixed_frame_, scan_msg->header.frame_id, tf_time, rclcpp::Duration(1.0));
+                try {
+                    buffer_->canTransform(fixed_frame_, scan_msg->header.frame_id, tf_time, tf2::durationFromSec(1.0));
+                    transform_available = buffer_->canTransform(fixed_frame_, scan_msg->header.frame_id, tf_time, tf2::durationFromSec(1.0));
                 } catch(tf2::TransformException &ex) {
                     RCLCPP_INFO(this->get_logger(), "Local Map : No tf available");
                     transform_available = false;
