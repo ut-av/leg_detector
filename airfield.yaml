@@ -1,0 +1,21 @@
+kind: package
+name: leg_detector
+dependencies:
+- ament_cmake
+- rosidl_default_generators
+- rosidl_default_runtime
+- sensor_msgs
+- tf2
+- tf2_geometry_msgs
+- tf2_ros
+- nav_msgs
+- geometry_msgs
+- std_msgs
+- opencv2
+# joint_leg_tracker.py runtime imports (not declared in package.xml):
+# scipy.optimize/spatial/stats + pykalman KalmanFilter. Missing either kills
+# the node at launch with ModuleNotFoundError.
+- python3-scipy
+- pykalman
+source_path: .
+ros_distro: jazzy
